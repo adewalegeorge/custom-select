@@ -10,7 +10,7 @@
  * MIT License
  */
 
-import 'custom-event-polyfill';
+// import 'custom-event-polyfill';
 
 const defaultParams = {
   containerClass: 'custom-select-container',
@@ -22,6 +22,9 @@ const defaultParams = {
   hasFocusClass: 'has-focus',
   isDisabledClass: 'is-disabled',
   isOpenClass: 'is-open',
+  hasIconClass: 'has-icon',
+  iconClass: 'custom-select-icon',
+  textClass: 'custom-select-icon-text'
 };
 
 function builder(el, builderParams) {
@@ -67,6 +70,30 @@ function builder(el, builderParams) {
     }
   }
 
+
+  function setElementAttributes(attrArr, targetEl) {
+    for (let n = 0, nb = attrArr.length; n < nb; n++) {
+      // if(attrArr[n].name != 'data-icon') {
+        targetEl.setAttribute(attrArr[n].name, attrArr[n].value);
+      // }
+    }
+  }
+
+  function createIconImage(attrArr, targetEl, depEl) {
+    if(attrArr.length && depEl.hasAttribute('data-icon')) {
+      const iconImage = document.createElement('img');
+      iconImage.setAttribute('src', depEl.getAttribute('data-icon'));
+      iconImage.className = builderParams.iconClass;
+      targetEl.classList.add(builderParams.hasIconClass);
+      if(targetEl.querySelector(`.${builderParams.iconClass}`) == null) {
+        targetEl.appendChild(iconImage);
+      } else {
+        targetEl.querySelector(`.${builderParams.iconClass}`)
+        .setAttribute('src', depEl.getAttribute('data-icon'));
+      }
+    }
+  }
+
   // Reassigns the focused and selected custom option
   // Updates the opener text
   // IMPORTANT: the setSelectedElement function doesn't change the select value!
@@ -81,6 +108,14 @@ function builder(el, builderParams) {
       cstOption.setAttribute('id', `${containerClass}-${uId}-selectedOption`);
       opener.setAttribute('aria-activedescendant', `${containerClass}-${uId}-selectedOption`);
       selectedElement = cstOption;
+
+      const cstOptionAttrs = [].filter.call(selectedElement.attributes, at => /^data-/.test(at.name));
+      if(cstOptionAttrs.length) {
+        setElementAttributes(cstOptionAttrs, opener);
+        createIconImage(cstOptionAttrs, opener, selectedElement);
+      }
+
+      // Check for data-icon attribute and create an image node
       opener.children[0].textContent = selectedElement.customSelectOriginalOption.text;
     } else {
       selectedElement = undefined;
@@ -356,6 +391,7 @@ function builder(el, builderParams) {
         cstOption.setAttribute('data-value', nodeList[i].value);
         cstOption.setAttribute('role', 'option');
 
+
         // IMPORTANT: Stores in a property of the created custom option
         // a hook to the the corrisponding select's option
         cstOption.customSelectOriginalOption = nodeList[i];
@@ -368,6 +404,15 @@ function builder(el, builderParams) {
         if (nodeList[i].selected) {
           setSelectedElement(cstOption);
         }
+
+        // Add data attributes starting with "datd-" to custom element options
+        const dataAttrs = [].filter.call(nodeList[i].attributes, at => /^data-/.test(at.name));
+        
+        if(dataAttrs.length) {
+          setElementAttributes(dataAttrs, cstOption);
+          createIconImage(dataAttrs, cstOption, nodeList[i]);
+        }
+
         cstList.push(cstOption);
       } else {
         throw new TypeError('Invalid Argument');
@@ -489,14 +534,19 @@ function builder(el, builderParams) {
   container.classList.add(builderParams.containerClass, containerClass);
 
   // Creates the opener
+  const openerOptionAttrs = [].filter.call(select.options[select.selectedIndex].attributes, at => /^data-/.test(at.name));
   opener = document.createElement('span');
   opener.className = builderParams.openerClass;
   opener.setAttribute('role', 'combobox');
   opener.setAttribute('aria-autocomplete', 'list');
   opener.setAttribute('aria-expanded', 'false');
-  opener.innerHTML = `<span>
+  opener.innerHTML = `<span class="${builderParams.textClass}">
    ${(select.selectedIndex !== -1 ? select.options[select.selectedIndex].text : '')}
    </span>`;
+  if(openerOptionAttrs.length) {
+    setElementAttributes(openerOptionAttrs, opener);
+    createIconImage(openerOptionAttrs, opener, select.options[select.selectedIndex]);
+  }
 
   // Creates the panel
   // and injects the markup of the select inside
